@@ -82,6 +82,12 @@ public:
         mTonemap = tonemap;
     }
 
+	void setChannelMask(bool set, int channel) {
+		if((channel >= 0) && (channel < (int)mChannelMask.Size)) {
+			mChannelMask[channel] = set ? 1.0f : 0.0f;
+		}
+	}
+
     static nanogui::Vector3f applyTonemap(const nanogui::Vector3f& value, float gamma, ETonemap tonemap);
     nanogui::Vector3f applyTonemap(const nanogui::Vector3f& value) const {
         return applyTonemap(value, mGamma, mTonemap);
@@ -157,6 +163,7 @@ private:
     nanogui::Matrix3f textureToNanogui(const Image* image);
     nanogui::Matrix3f displayWindowToNanogui(const Image* image);
 
+	nanogui::Color mChannelMask{1.0f, 1.0f};
     float mPixelRatio = 1;
     float mExposure = 0;
     float mOffset = 0;

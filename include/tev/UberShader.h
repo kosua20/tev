@@ -23,6 +23,7 @@ public:
         const nanogui::Vector2f& checkerSize,
         nanogui::Texture* textureImage,
         const nanogui::Matrix3f& transformImage,
+		const nanogui::Color& channelMask,
         float exposure,
         float offset,
         float gamma,
@@ -38,6 +39,7 @@ public:
         const nanogui::Matrix3f& transformImage,
         nanogui::Texture* textureReference,
         const nanogui::Matrix3f& transformReference,
+		const nanogui::Color& channelMask,
         float exposure,
         float offset,
         float gamma,
@@ -60,6 +62,7 @@ private:
     void bindImageData(
         nanogui::Texture* textureImage,
         const nanogui::Matrix3f& transformImage,
+		const nanogui::Color& channelMask,
         float exposure,
         float offset,
         float gamma,

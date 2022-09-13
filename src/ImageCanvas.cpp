@@ -68,6 +68,7 @@ void ImageCanvas::draw_contents() {
             // The uber shader operates in [-1, 1] coordinates and requires the _inserve_
             // image transform to obtain texture coordinates in [0, 1]-space.
             inverse(transform(image)),
+			mChannelMask,
             mExposure,
             mOffset,
             mGamma,
@@ -86,6 +87,7 @@ void ImageCanvas::draw_contents() {
         inverse(transform(mImage.get())),
         mReference->texture(mRequestedChannelGroup),
         inverse(transform(mReference.get())),
+		mChannelMask,
         mExposure,
         mOffset,
         mGamma,

@@ -410,6 +410,7 @@ void UberShader::draw(const Vector2f& pixelSize, const Vector2f& checkerSize) {
     draw(
         pixelSize, checkerSize,
         nullptr, Matrix3f{0.0f},
+		 Color{255,255,255,255},
         0.0f, 0.0f, 0.0f, false,
         ETonemap::SRGB
     );
@@ -420,6 +421,7 @@ void UberShader::draw(
     const Vector2f& checkerSize,
     Texture* textureImage,
     const Matrix3f& transformImage,
+	const Color& channelMask,
     float exposure,
     float offset,
     float gamma,
@@ -430,6 +432,7 @@ void UberShader::draw(
         pixelSize, checkerSize,
         textureImage, transformImage,
         nullptr, Matrix3f{0.0f},
+		channelMask,
         exposure, offset, gamma, clipToLdr,
         tonemap, EMetric::Error
     );
@@ -442,6 +445,7 @@ void UberShader::draw(
     const Matrix3f& transformImage,
     Texture* textureReference,
     const Matrix3f& transformReference,
+	const Color& channelMask,
     float exposure,
     float offset,
     float gamma,
@@ -462,7 +466,7 @@ void UberShader::draw(
     }
 
     bindCheckerboardData(pixelSize, checkerSize);
-    bindImageData(textureImage, transformImage, exposure, offset, gamma, tonemap);
+    bindImageData(textureImage, transformImage, channelMask, exposure, offset, gamma, tonemap);
     bindReferenceData(textureReference, transformReference, metric);
     mShader->set_uniform("hasImage", hasImage);
     mShader->set_uniform("hasReference", hasReference);
@@ -482,6 +486,7 @@ void UberShader::bindCheckerboardData(const Vector2f& pixelSize, const Vector2f&
 void UberShader::bindImageData(
     Texture* textureImage,
     const Matrix3f& transformImage,
+	const nanogui::Color& channelMask,
     float exposure,
     float offset,
     float gamma,
