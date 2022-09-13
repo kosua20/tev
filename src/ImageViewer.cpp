@@ -1582,7 +1582,7 @@ void ImageViewer::setUiVisible(bool shouldBeVisible) {
     for (const auto& image : mImages) {
         // There is no point showing the footer as long as no image
         // has more than the root group.
-        if (image->channelGroups().size() > 1) {
+        if (image->channelGroups().size() > 0) {
             shouldFooterBeVisible = true;
             break;
         }
