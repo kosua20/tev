@@ -74,6 +74,7 @@ UberShader::UberShader(RenderPass* renderPass) {
             uniform int metric;
 
             uniform vec4 bgColor;
+			uniform vec4 channelMask;
 
             varying vec2 checkerUv;
             varying vec2 imageUv;
@@ -145,12 +146,12 @@ UberShader::UberShader(RenderPass* renderPass) {
                 return vec3(0.0);
             }
 
-            vec4 sample(sampler2D sampler, vec2 uv) {
+            vec4 sample(sampler2D sampler, vec2 uv, vec4 channelMask) {
                 vec4 color = texture2D(sampler, uv);
                 if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
                     color = vec4(0.0);
                 }
-                return color;
+                return mix(vec4(0.0, 0.0, 0.0, 1.0), color, channelMask);
             }
 
             void main() {
@@ -164,7 +165,7 @@ UberShader::UberShader(RenderPass* renderPass) {
                     return;
                 }
 
-                vec4 imageVal = sample(image, imageUv);
+                vec4 imageVal = sample(image, imageUv, channelMask);
                 if (!hasReference) {
                     gl_FragColor = vec4(
                         applyTonemap(applyExposureAndOffset(imageVal.rgb), vec4(checker, 1.0 - imageVal.a)),
@@ -174,7 +175,7 @@ UberShader::UberShader(RenderPass* renderPass) {
                     return;
                 }
 
-                vec4 referenceVal = sample(reference, referenceUv);
+                vec4 referenceVal = sample(reference, referenceUv, channelMask);
 
                 vec3 difference = imageVal.rgb - referenceVal.rgb;
                 float alpha = (imageVal.a + referenceVal.a) * 0.5;
@@ -293,12 +294,12 @@ UberShader::UberShader(RenderPass* renderPass) {
                 return float3(0.0f);
             }
 
-            float4 sample(texture2d<float, access::sample> texture, sampler textureSampler, float2 uv) {
+            float4 sample(texture2d<float, access::sample> texture, sampler textureSampler, float2 uv, float4 channelMask) {
                 float4 color = texture.sample(textureSampler, uv);
                 if (uv.x < 0.0f || uv.x > 1.0f || uv.y < 0.0f || uv.y > 1.0f) {
                     return float4(0.0f);
                 }
-                return color;
+                return mix(float4(0.0f, 0.0f, 0.0f, 1.0f), color, channelMask);
             }
 
             struct VertexOut {
@@ -324,7 +325,8 @@ UberShader::UberShader(RenderPass* renderPass) {
                 const constant bool& clipToLdr,
                 const constant int& tonemap,
                 const constant int& metric,
-                const constant float4& bgColor
+                const constant float4& bgColor,
+				const constant float4& channelMask
             ) {
                 float3 darkGray = float3(0.5f, 0.5f, 0.5f);
                 float3 lightGray = float3(0.55f, 0.55f, 0.55f);
@@ -335,7 +337,7 @@ UberShader::UberShader(RenderPass* renderPass) {
                     return float4(checker, 1.0f);
                 }
 
-                float4 imageVal = sample(image, image_sampler, vert.imageUv);
+                float4 imageVal = sample(image, image_sampler, vert.imageUv, channelMask);
                 if (!hasReference) {
                     float4 color = float4(
                         applyTonemap(
@@ -353,7 +355,7 @@ UberShader::UberShader(RenderPass* renderPass) {
                     return color;
                 }
 
-                float4 referenceVal = sample(reference, reference_sampler, vert.referenceUv);
+                float4 referenceVal = sample(reference, reference_sampler, vert.referenceUv, channelMask);
 
                 float3 difference = imageVal.rgb - referenceVal.rgb;
                 float alpha = (imageVal.a + referenceVal.a) * 0.5f;
@@ -500,6 +502,7 @@ void UberShader::bindImageData(
     mShader->set_uniform("offset", offset);
     mShader->set_uniform("gamma", gamma);
     mShader->set_uniform("tonemap", static_cast<int>(tonemap));
+	mShader->set_uniform("channelMask", channelMask);
 
     mShader->set_texture("colormap", mColorMap.get());
 }
