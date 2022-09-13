@@ -272,6 +272,35 @@ ImageViewer::ImageViewer(const shared_ptr<BackgroundImagesLoader>& imagesLoader,
         );
     }
 
+	// Channel mask options
+	{
+		mChannelMaskButtonContainer = new Widget{mSidebarLayout};
+		mChannelMaskButtonContainer->set_layout(new GridLayout{Orientation::Horizontal, 4, Alignment::Fill, 5, 2});
+
+		auto makeChannelMaskButton = [&](const string& name, function<void(bool)> callback) {
+			auto button = new Button{mChannelMaskButtonContainer, name};
+			button->set_flags(Button::ToggleButton);
+			button->set_font_size(15);
+			button->set_change_callback(callback);
+			return button;
+		};
+
+		makeChannelMaskButton("R",  [this](bool set) { setChannelMask(set, 0); });
+		makeChannelMaskButton("G", 	[this](bool set) { setChannelMask(set, 1); });
+		makeChannelMaskButton("B",  [this](bool set) { setChannelMask(set, 2); });
+		makeChannelMaskButton("A",  [this](bool set) { setChannelMask(set, 3); });
+
+		setChannelMask(true, 0);
+		setChannelMask(true, 1);
+		setChannelMask(true, 2);
+		setChannelMask(true, 3);
+
+		mChannelMaskButtonContainer->set_tooltip(
+			"Displayed channels selection:\n"
+			"Red, Green, Blue, Alpha"
+		);
+	}
+
     // Image selection
     {
         auto spacer = new Widget{mSidebarLayout};
@@ -1499,6 +1528,13 @@ void ImageViewer::setMetric(EMetric metric) {
         Button* b = dynamic_cast<Button*>(buttons[i]);
         b->set_pushed((EMetric)i == metric);
     }
+}
+
+void ImageViewer::setChannelMask(bool set, int channel) {
+	mImageCanvas->setChannelMask(set, channel);
+	auto& buttons = mChannelMaskButtonContainer->children();
+	Button* b = dynamic_cast<Button*>(buttons[channel]);
+	b->set_pushed(set);
 }
 
 nanogui::Vector2i ImageViewer::sizeToFitImage(const shared_ptr<Image>& image) {

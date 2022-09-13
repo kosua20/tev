@@ -116,6 +116,8 @@ public:
 
     void setMetric(EMetric metric);
 
+	void setChannelMask(bool set, int channel);
+
     nanogui::Vector2i sizeToFitImage(const std::shared_ptr<Image>& image);
     nanogui::Vector2i sizeToFitAllImages();
     bool setFilter(const std::string& filter);
@@ -206,6 +208,7 @@ private:
 
     nanogui::Widget* mTonemapButtonContainer;
     nanogui::Widget* mMetricButtonContainer;
+	nanogui::Widget* mChannelMaskButtonContainer;
 
     std::shared_ptr<BackgroundImagesLoader> mImagesLoader;
 
