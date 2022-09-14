@@ -100,6 +100,78 @@ Task<vector<ImageData>> BcnImageLoader::load(istream& iStream, const fs::path&, 
 
 		result.emplace_back();
 		ImageData& resultData = result.back();
+
+		const nanogui::Vector2i size{sliceInfo.width, sliceInfo.height};
+		const unsigned int channelCount =  texInfo.format == DDSKTX_FORMAT_BC6H ? 3u : texInfo.format == DDSKTX_FORMAT_BC5 ? 2u : texInfo.format == DDSKTX_FORMAT_BC4 ? 1u : 4u;
+		const unsigned int bytesPerChannel = texInfo.format == DDSKTX_FORMAT_BC6H ? 4u : 1u;
+		resultData.channels = makeNChannels(channelCount, size);
+		const unsigned int dstPitch = channelCount * bytesPerChannel * sliceInfo.width;
+		// Allocate destination.
+		std::vector<unsigned char> dstData(sliceInfo.width * sliceInfo.height * channelCount * bytesPerChannel);
+
+		// Uncompress.
+		unsigned char* src = (unsigned char*)sliceInfo.buff;
+		unsigned char* dst = dstData.data();
+
+		for(int i = 0; i < sliceInfo.height; i += 4){
+
+			for(int j = 0; j < sliceInfo.width; j += 4){
+				unsigned char* dstLine = dst + (i * sliceInfo.width + j) * bytesPerChannel * channelCount;
+				switch (texInfo.format) {
+					case DDSKTX_FORMAT_BC1:
+						bcdec_bc1(src, dstLine, dstPitch);
+						src += BCDEC_BC1_BLOCK_SIZE;
+						break;
+					case DDSKTX_FORMAT_BC2:
+						bcdec_bc2(src, dstLine, dstPitch);
+						src += BCDEC_BC2_BLOCK_SIZE;
+						break;
+					case DDSKTX_FORMAT_BC3:
+						bcdec_bc3(src, dstLine, dstPitch);
+						src += BCDEC_BC3_BLOCK_SIZE;
+						break;
+					case DDSKTX_FORMAT_BC4:
+						bcdec_bc4(src, dstLine, dstPitch);
+						src += BCDEC_BC4_BLOCK_SIZE;
+						break;
+					case DDSKTX_FORMAT_BC5:
+						bcdec_bc5(src, dstLine, dstPitch);
+						src += BCDEC_BC5_BLOCK_SIZE;
+						break;
+					case DDSKTX_FORMAT_BC6H:
+						bcdec_bc6h_float(src, dstLine, dstPitch / 4u, true);
+						// assume signed for now, need to check FourCC.
+						src += BCDEC_BC6H_BLOCK_SIZE;
+						break;
+					case DDSKTX_FORMAT_BC7:
+						bcdec_bc7(src, dstLine, dstPitch);
+						src += BCDEC_BC7_BLOCK_SIZE;
+						break;
+					default:
+						break;
+				}
+			}
+
+		}
+
+		// Transfer to channels
+		for(int i = 0; i < sliceInfo.width * sliceInfo.height; ++i){
+			for(int c = 0; c < (int)channelCount; ++c){
+				int idx = (i * channelCount + c) * bytesPerChannel;
+
+				if(texInfo.format == DDSKTX_FORMAT_BC6H){
+					resultData.channels[c].at(i) = *((float*)&dstData[idx]);
+				} else {
+					resultData.channels[c].at(i) = ((float)dstData[idx])/255.0f;
+				}
+
+				// Gamma conversion (even is sRGB flag not present?)
+				if(c != 3){
+					resultData.channels[c].at(i) = toLinear(resultData.channels[c].at(i));
+				}
+			}
+		}
+
 		resultData.hasPremultipliedAlpha = false;
 		resultData.partName = "Mip " + std::to_string(mipIdx);
 	}
