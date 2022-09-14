@@ -211,6 +211,8 @@ include_directories(
     ${OPENEXR_INCLUDE_DIRS}
     ${QOI_INCLUDE}
     ${STB_INCLUDE}
+    ${BCDEC_INCLUDE}
+    ${DDSKTX_INCLUDE}
     ${TINYLOGGER_INCLUDE}
     ${UTFCPP_INCLUDE}
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
