@@ -28,3 +28,6 @@
 [submodule "dependencies/fmt"]
 	path = dependencies/fmt
 	url = https://github.com/fmtlib/fmt
+[submodule "dependencies/dds-ktx"]
+	path = dependencies/dds-ktx
+	url = https://github.com/septag/dds-ktx
