@@ -8,6 +8,7 @@
 #include <tev/imageio/PfmImageLoader.h>
 #include <tev/imageio/QoiImageLoader.h>
 #include <tev/imageio/StbiImageLoader.h>
+#include <tev/imageio/BcnImageLoader.h>
 #ifdef _WIN32
 #   include <tev/imageio/DdsImageLoader.h>
 #endif
@@ -24,6 +25,7 @@ const vector<unique_ptr<ImageLoader>>& ImageLoader::getLoaders() {
         imageLoaders.emplace_back(new PfmImageLoader());
         imageLoaders.emplace_back(new ClipboardImageLoader());
         imageLoaders.emplace_back(new EmptyImageLoader());
+		imageLoaders.emplace_back(new BcnImageLoader());
 #ifdef _WIN32
         imageLoaders.emplace_back(new DdsImageLoader());
 #endif
