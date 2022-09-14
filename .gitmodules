@@ -31,3 +31,6 @@
 [submodule "dependencies/dds-ktx"]
 	path = dependencies/dds-ktx
 	url = https://github.com/septag/dds-ktx
+[submodule "dependencies/bcdec"]
+	path = dependencies/bcdec
+	url = https://github.com/iOrange/bcdec.git
