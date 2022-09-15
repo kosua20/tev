@@ -75,169 +75,192 @@ Task<vector<ImageData>> BcnImageLoader::load(istream& iStream, const fs::path&, 
 		{ DDSKTX_FORMAT_A8,		{ 1, 1, 1 }},
 		{ DDSKTX_FORMAT_R32F,	{ 1, 4, 1 * 4 }},
 	};
-	/* Missing:
-	 DDSKTX_FORMAT_RGBA8S,
-	 DDSKTX_FORMAT_RG16,
-	 DDSKTX_FORMAT_R16,
-	 DDSKTX_FORMAT_RG16S,
-	 DDSKTX_FORMAT_RGBA16,
-	 DDSKTX_FORMAT_RG8S
-	 */
+
+	// TODO: Missing: DDSKTX_FORMAT_RGBA8S,
+	// TODO: Missing: DDSKTX_FORMAT_RG16,
+	// TODO: Missing: DDSKTX_FORMAT_R16,
+	// TODO: Missing: DDSKTX_FORMAT_RG16S,
+	// TODO: Missing: DDSKTX_FORMAT_RGBA16,
+	// TODO: Missing: DDSKTX_FORMAT_RGB10A2,
+	// TODO: Missing: DDSKTX_FORMAT_RG11B10F,
+	// TODO: Missing: DDSKTX_FORMAT_RG8S
+
 
 	if(formatInfos.count(texInfo.format) == 0){
 		throw invalid_argument{ fmt::format("DDS image does not use supported format ({}).",
 											ddsktx_format_str(texInfo.format)) };
 	}
 
-	if((texInfo.flags & DDSKTX_TEXTURE_FLAG_VOLUME) != 0u){
-		tlog::warning("DDS 3D image not supported.");
-	}
-	if(texInfo.depth != 1u){
-		tlog::warning("DDS 3D image not supported.");
-	}
-	// TODO: support 3D images (which layout?)
-
-	if((texInfo.flags & DDSKTX_TEXTURE_FLAG_CUBEMAP) != 0u){
-		tlog::warning("DDS cube image not supported.");
-	}
-	// TODO: support cubemap images (which layout?)
-
-	if(texInfo.num_layers != 1u){
-		tlog::warning("DDS array image not supported.");
-	}
-	// TODO: support array images (which layout?)
-
+	// TODO: if !hasAlpha, clear the alpha channel?
+	// TODO: if isSrgb, which conversion to apply/skip?
 	const bool isSrgb = (texInfo.flags & DDSKTX_TEXTURE_FLAG_SRGB) != 0u;
 	const bool hasAlpha = (texInfo.flags & DDSKTX_TEXTURE_FLAG_ALPHA) != 0u;
+	const bool isCube = (texInfo.flags & DDSKTX_TEXTURE_FLAG_CUBEMAP) != 0u;
+	const bool is3D = ((texInfo.flags & DDSKTX_TEXTURE_FLAG_VOLUME) != 0u) || (texInfo.depth != 1u);
+	const bool isArray = texInfo.num_layers != 1u;
 
 	// TODO: How should we lay out the slices/mips/faces.
-	// For now, one part per mip, ignore the channel selector (which should be used with matchesFuzzy(name, selector))
-	// Instead maybe slice/face as part, mip as channel group.
-
-	// TODO: some helper to handle decompression separately from face/mips parsing.
+	// For now, one part per mip (because different sizes), ignore the channel selector (which should be used with matchesFuzzy(name, selector)), and layer/face as channel layers.
+	// For cubemaps, maybe flatten in a cross?
+	// Display string for layers should be compacted.
 
 	// TODO: taskify.
 
 	const FormatInfos& format = formatInfos.at(texInfo.format);
 	const int stepSize = ddsktx_format_compressed(texInfo.format) ? 4 : 1;
+	const int effectiveDepth = isCube ? 6 : texInfo.depth;
 
 	for(int mipIdx = 0; mipIdx < texInfo.num_mips; ++mipIdx){
-		ddsktx_sub_data sliceInfo;
-		ddsktx_get_sub(&texInfo, &sliceInfo, data.data(), dataSize, 0, 0, mipIdx);
 
-		if(sliceInfo.width == 0 || sliceInfo.height == 0){
-			tlog::warning() << "DDS mip " << mipIdx << " has zero pixels.";
-			continue;
-		}
-
+		// All channels in an image data should have the same size.
 		result.emplace_back();
 		ImageData& resultData = result.back();
-
-		const nanogui::Vector2i size{std::max(stepSize, sliceInfo.width), std::max(stepSize, sliceInfo.height)};
 		
-		resultData.channels = makeNChannels(format.channelCount, size);
-		const unsigned int dstPitch = format.channelCount * format.bytesPerChannel * size.x();
-		// Allocate destination.
-		std::vector<unsigned char> dstData(size.y() * dstPitch);
+		for(int layIdx = 0; layIdx < texInfo.num_layers; ++layIdx){
 
-		// Uncompress.
-		unsigned char* src = (unsigned char*)sliceInfo.buff;
-		unsigned char* dst = dstData.data();
+			for(int faceIdx = 0; faceIdx < effectiveDepth; ++faceIdx){
 
-		for(int i = 0; i < sliceInfo.height; i += stepSize){
+				ddsktx_sub_data sliceInfo;
+				ddsktx_get_sub(&texInfo, &sliceInfo, data.data(), dataSize, layIdx, faceIdx, mipIdx);
 
-			for(int j = 0; j < sliceInfo.width; j += stepSize){
-				unsigned char* dstLine = dst + (i * size.x() + j) * format.channelCount * format.bytesPerChannel;
-				switch (texInfo.format) {
-					case DDSKTX_FORMAT_BC1:
-						bcdec_bc1(src, dstLine, dstPitch);
-						break;
-					case DDSKTX_FORMAT_BC2:
-						bcdec_bc2(src, dstLine, dstPitch);
-						break;
-					case DDSKTX_FORMAT_BC3:
-						bcdec_bc3(src, dstLine, dstPitch);
-						break;
-					case DDSKTX_FORMAT_BC4:
-						bcdec_bc4(src, dstLine, dstPitch);
-						break;
-					case DDSKTX_FORMAT_BC5:
-						bcdec_bc5(src, dstLine, dstPitch);
-						break;
-					case DDSKTX_FORMAT_BC6H:
-						bcdec_bc6h_float(src, dstLine, dstPitch / 4u, true);
-						// assume signed for now, need to check FourCC.
-						break;
-					case DDSKTX_FORMAT_BC7:
-						bcdec_bc7(src, dstLine, dstPitch);
-						break;
-					case DDSKTX_FORMAT_BGRA8:
-						dst[0] = src[2];
-						dst[1] = src[1];
-						dst[2] = src[0];
-						dst[3] = src[3];
-						break;
-					case DDSKTX_FORMAT_RGBA8:
-						dst[0] = src[0];
-						dst[1] = src[1];
-						dst[2] = src[2];
-						dst[3] = src[3];
-						break;
-					case DDSKTX_FORMAT_RGB8:
-						dst[0] = src[0];
-						dst[1] = src[1];
-						dst[2] = src[2];
-						break;
-					case DDSKTX_FORMAT_RG8:
-						dst[0] = src[0];
-						dst[1] = src[1];
-						break;
-					case DDSKTX_FORMAT_R8:
-					case DDSKTX_FORMAT_A8:
-						dst[0] = src[0];
-						break;
-					case DDSKTX_FORMAT_R32F:
-						((float*)dst)[0] = ((float*)src)[0];
-						break;
-					case DDSKTX_FORMAT_R16F:
-						{
-							unsigned short v = (src[0] << 16) | src[1];
-							((float*)dst)[0] = bcdec__half_to_float_quick(v);
-						}
-						break;
-					case DDSKTX_FORMAT_RG16F:
-						for(int c = 0; c < 2; ++c){
-							unsigned short v = (src[2 * c] << 16) | src[2 * c + 1];
-							((float*)dst)[c] = bcdec__half_to_float_quick(v);
-						}
-						break;
-					case DDSKTX_FORMAT_RGBA16F:
-						for(int c = 0; c < 4; ++c){
-							unsigned short v = (src[2 * c] << 16) | src[2 * c + 1];
-							((float*)dst)[c] = bcdec__half_to_float_quick(v);
-						}
-						break;
-					default:
-						break;
+				if(sliceInfo.width == 0 || sliceInfo.height == 0){
+					tlog::warning() << "DDS mip " << mipIdx << " has zero pixels.";
+					continue;
 				}
-				src += format.srcStride;
-			}
-		}
 
-		// Transfer to channels
-		for(int i = 0; i < size.x() * size.y(); ++i){
-			for(int c = 0; c < (int)format.channelCount; ++c){
-				int idx = (i * format.channelCount + c) * format.bytesPerChannel;
+				const nanogui::Vector2i size{std::max(stepSize, sliceInfo.width), std::max(stepSize, sliceInfo.height)};
+				string baseName;
 
-				if(format.bytesPerChannel == 4u){
-					resultData.channels[c].at(i) = *((float*)&dstData[idx]);
+				if(isArray){
+					baseName += "Layer " + std::to_string(layIdx);
+				}
+
+				if(isCube){
+					const std::vector<string> faceNames = {"+X", "-X", "+Y", "-Y", "+Z", "-Z"};
+					baseName += "Face " + faceNames[faceIdx];
+				}
+				if(is3D){
+					baseName += "Slice " + std::to_string(faceIdx);
+				}
+
+				if(!baseName.empty()){
+					resultData.layers.push_back(baseName);
+				}
+				
+				const int firstChannel = resultData.channels.size();
+				if (format.channelCount > 1) {
+					const vector<string> channelNames = {"R", "G", "B", "A"};
+					for (int c = 0; c < format.channelCount; ++c) {
+						string name = c < (int)channelNames.size() ? channelNames[c] : to_string(c);
+						resultData.channels.emplace_back( baseName + name, size);
+					}
 				} else {
-					resultData.channels[c].at(i) = ((float)dstData[idx])/255.0f;
+					resultData.channels.emplace_back( baseName + "L", size);
+				}
+				const unsigned int dstPitch = format.channelCount * format.bytesPerChannel * size.x();
+				// Allocate destination.
+				std::vector<unsigned char> dstData(size.y() * dstPitch);
+
+				// Uncompress.
+				unsigned char* src = (unsigned char*)sliceInfo.buff;
+				unsigned char* dst = dstData.data();
+
+				for(int i = 0; i < sliceInfo.height; i += stepSize){
+
+					for(int j = 0; j < sliceInfo.width; j += stepSize){
+						unsigned char* dstLine = dst + (i * size.x() + j) * format.channelCount * format.bytesPerChannel;
+						switch (texInfo.format) {
+							case DDSKTX_FORMAT_BC1:
+								bcdec_bc1(src, dstLine, dstPitch);
+								break;
+							case DDSKTX_FORMAT_BC2:
+								bcdec_bc2(src, dstLine, dstPitch);
+								break;
+							case DDSKTX_FORMAT_BC3:
+								bcdec_bc3(src, dstLine, dstPitch);
+								break;
+							case DDSKTX_FORMAT_BC4:
+								bcdec_bc4(src, dstLine, dstPitch);
+								break;
+							case DDSKTX_FORMAT_BC5:
+								bcdec_bc5(src, dstLine, dstPitch);
+								break;
+							case DDSKTX_FORMAT_BC6H:
+								bcdec_bc6h_float(src, dstLine, dstPitch / 4u, true);
+								// assume signed for now, need to check FourCC.
+								break;
+							case DDSKTX_FORMAT_BC7:
+								bcdec_bc7(src, dstLine, dstPitch);
+								break;
+							case DDSKTX_FORMAT_BGRA8:
+								dst[0] = src[2];
+								dst[1] = src[1];
+								dst[2] = src[0];
+								dst[3] = src[3];
+								break;
+							case DDSKTX_FORMAT_RGBA8:
+								dst[0] = src[0];
+								dst[1] = src[1];
+								dst[2] = src[2];
+								dst[3] = src[3];
+								break;
+							case DDSKTX_FORMAT_RGB8:
+								dst[0] = src[0];
+								dst[1] = src[1];
+								dst[2] = src[2];
+								break;
+							case DDSKTX_FORMAT_RG8:
+								dst[0] = src[0];
+								dst[1] = src[1];
+								break;
+							case DDSKTX_FORMAT_R8:
+							case DDSKTX_FORMAT_A8:
+								dst[0] = src[0];
+								break;
+							case DDSKTX_FORMAT_R32F:
+								((float*)dst)[0] = ((float*)src)[0];
+								break;
+							case DDSKTX_FORMAT_R16F:
+								{
+									unsigned short v = (src[0] << 16) | src[1];
+									((float*)dst)[0] = bcdec__half_to_float_quick(v);
+								}
+								break;
+							case DDSKTX_FORMAT_RG16F:
+								for(int c = 0; c < 2; ++c){
+									unsigned short v = (src[2 * c] << 16) | src[2 * c + 1];
+									((float*)dst)[c] = bcdec__half_to_float_quick(v);
+								}
+								break;
+							case DDSKTX_FORMAT_RGBA16F:
+								for(int c = 0; c < 4; ++c){
+									unsigned short v = (src[2 * c] << 16) | src[2 * c + 1];
+									((float*)dst)[c] = bcdec__half_to_float_quick(v);
+								}
+								break;
+							default:
+								break;
+						}
+						src += format.srcStride;
+					}
 				}
 
-				// Gamma conversion (even is sRGB flag not present?)
-				if(c != 3){
-					resultData.channels[c].at(i) = toLinear(resultData.channels[c].at(i));
+				// Transfer to channels
+				for(int i = 0; i < size.x() * size.y(); ++i){
+					for(int c = 0; c < (int)format.channelCount; ++c){
+						int idx = (i * format.channelCount + c) * format.bytesPerChannel;
+
+						if(format.bytesPerChannel == 4u){
+							resultData.channels[firstChannel + c].at(i) = *((float*)&dstData[idx]);
+						} else {
+							resultData.channels[firstChannel + c].at(i) = ((float)dstData[idx])/255.0f;
+						}
+
+						// Gamma conversion (even is sRGB flag not present?)
+						if(c != 3){
+							resultData.channels[firstChannel + c].at(i) = toLinear(resultData.channels[firstChannel + c].at(i));
+						}
+					}
 				}
 			}
 		}
