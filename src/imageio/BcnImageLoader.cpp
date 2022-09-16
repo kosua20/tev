@@ -195,47 +195,49 @@ Task<vector<ImageData>> BcnImageLoader::load(istream& iStream, const fs::path&, 
 							case DDSKTX_FORMAT_BGRA8:
 								dst[0] = src[2];
 								dst[1] = src[1];
-								dst[2] = src[0];
-								dst[3] = src[3];
+                                dstLine[0] = src[2];
+                                dstLine[1] = src[1];
+                                dstLine[2] = src[0];
+                                dstLine[3] = src[3];
 								break;
 							case DDSKTX_FORMAT_RGBA8:
-								dst[0] = src[0];
-								dst[1] = src[1];
-								dst[2] = src[2];
-								dst[3] = src[3];
+                                dstLine[0] = src[0];
+                                dstLine[1] = src[1];
+                                dstLine[2] = src[2];
+                                dstLine[3] = src[3];
 								break;
 							case DDSKTX_FORMAT_RGB8:
-								dst[0] = src[0];
-								dst[1] = src[1];
-								dst[2] = src[2];
+                                dstLine[0] = src[0];
+                                dstLine[1] = src[1];
+                                dstLine[2] = src[2];
 								break;
 							case DDSKTX_FORMAT_RG8:
-								dst[0] = src[0];
-								dst[1] = src[1];
+                                dstLine[0] = src[0];
+                                dstLine[1] = src[1];
 								break;
 							case DDSKTX_FORMAT_R8:
 							case DDSKTX_FORMAT_A8:
-								dst[0] = src[0];
+                                dstLine[0] = src[0];
 								break;
 							case DDSKTX_FORMAT_R32F:
-								((float*)dst)[0] = ((float*)src)[0];
+								((float*) dstLine )[0] = ((float*)src)[0];
 								break;
 							case DDSKTX_FORMAT_R16F:
 								{
-									unsigned short v = (src[0] << 16) | src[1];
-									((float*)dst)[0] = bcdec__half_to_float_quick(v);
+									unsigned short v = (src[1] << 8) | src[0];
+									((float*) dstLine )[0] = bcdec__half_to_float_quick(v);
 								}
 								break;
 							case DDSKTX_FORMAT_RG16F:
 								for(int c = 0; c < 2; ++c){
-									unsigned short v = (src[2 * c] << 16) | src[2 * c + 1];
-									((float*)dst)[c] = bcdec__half_to_float_quick(v);
+									unsigned short v = (src[2 * c + 1] << 8) | src[2 * c];
+									((float*) dstLine )[c] = bcdec__half_to_float_quick(v);
 								}
 								break;
 							case DDSKTX_FORMAT_RGBA16F:
 								for(int c = 0; c < 4; ++c){
-									unsigned short v = (src[2 * c] << 16) | src[2 * c + 1];
-									((float*)dst)[c] = bcdec__half_to_float_quick(v);
+									unsigned short v = (src[2 * c + 1] << 8) | src[2 * c];
+									((float*) dstLine )[c] = bcdec__half_to_float_quick(v);
 								}
 								break;
 							default:
@@ -259,13 +261,15 @@ Task<vector<ImageData>> BcnImageLoader::load(istream& iStream, const fs::path&, 
 						// Gamma conversion (even is sRGB flag not present?)
 						if(c != 3){
 							resultData.channels[firstChannel + c].at(i) = toLinear(resultData.channels[firstChannel + c].at(i));
-						}
+                        }  else if(!hasAlpha ) {
+                            resultData.channels[firstChannel + c].at( i ) = 1.f;
+                        }
 					}
 				}
 			}
 		}
 
-		resultData.hasPremultipliedAlpha = false;
+		resultData.hasPremultipliedAlpha = true;
 		resultData.partName = "Mip " + std::to_string(mipIdx);
 	}
 
