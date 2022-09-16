@@ -193,8 +193,6 @@ Task<vector<ImageData>> BcnImageLoader::load(istream& iStream, const fs::path&, 
 								bcdec_bc7(src, dstLine, dstPitch);
 								break;
 							case DDSKTX_FORMAT_BGRA8:
-								dst[0] = src[2];
-								dst[1] = src[1];
                                 dstLine[0] = src[2];
                                 dstLine[1] = src[1];
                                 dstLine[2] = src[0];
