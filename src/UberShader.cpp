@@ -149,7 +149,7 @@ UberShader::UberShader(RenderPass* renderPass) {
             vec4 sample(sampler2D sampler, vec2 uv, vec4 channelMask) {
                 vec4 color = texture2D(sampler, uv);
                 if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
-                    color = vec4(0.0);
+                    return vec4(0.0);
                 }
                 return mix(vec4(0.0, 0.0, 0.0, 1.0), color, channelMask);
             }
