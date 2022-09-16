@@ -26,7 +26,7 @@ vector<string> ImageData::channelsInLayer(string layerName) const {
         // if no other dot is found after the end of the layer name,
         // then we have found a channel of this layer.
         if (c.name().starts_with(layerName)) {
-            const auto& channelWithoutLayer = c.name().substr(layerName.length());
+            const string channelWithoutLayer = c.name().substr(layerName.length());
             if (channelWithoutLayer.find(".") == string::npos) {
                 result.emplace_back(c.name());
             }
@@ -325,6 +325,12 @@ vector<ChannelGroup> Image::getGroupedChannels(const string& layerName) const {
         // Remove duplicates
         channelTails.erase(unique(begin(channelTails), end(channelTails)), end(channelTails));
         transform(begin(channelTails), end(channelTails), begin(channelTails), Channel::tail);
+		transform(begin(channelTails), end(channelTails), begin(channelTails), [&layer](const string& channel){
+			if(channel.starts_with(layer)){
+				return channel.substr(layer.size());
+			}
+			return channel;
+		});
         string channelsString = join(channelTails, ",");
 
         string name;
@@ -498,6 +504,12 @@ string Image::toString() const {
         transform(begin(channels), end(channels), begin(channels), [](string channel) {
             return Channel::tail(channel);
         });
+		transform(begin(channels), end(channels), begin(channels), [&layer](string channel) {
+			if(channel.starts_with(layer)){
+				return channel.substr(layer.size());
+			}
+			return channel;
+		});
         if (layer.empty()) {
             return join(channels, ",");
         } else if (channels.size() == 1) {
