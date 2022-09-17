@@ -151,12 +151,22 @@ UberShader::UberShader(RenderPass* renderPass) {
                 return vec3(0.0);
             }
 
+			vec4 applyMask(vec4 color, vec4 channelMask){
+				vec4 masked = mix(vec4(0.0, 0.0, 0.0, 1.0), color, channelMask);
+				// Special mono-channel case.
+				if(dot(channelMask, vec4(1.0)) == 1.0){
+					float val = dot(masked, channelMask);
+					masked = vec4(val, val, val, 1.0);
+				}
+				return masked;
+			}
+
             vec4 sample(sampler2D sampler, vec2 uv, vec4 channelMask) {
                 vec4 color = texture2D(sampler, uv);
                 if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
                     return vec4(0.0);
                 }
-                return mix(vec4(0.0, 0.0, 0.0, 1.0), color, channelMask);
+                return applyMask(color, channelMask);
             }
 
             void main() {
@@ -304,12 +314,22 @@ UberShader::UberShader(RenderPass* renderPass) {
                 return float3(0.0f);
             }
 
+			float4 applyMask(float4 color, float4 channelMask){
+				float4 masked = mix(float4(0.0f, 0.0f, 0.0f, 1.0f), color, channelMask);
+				// Special mono-channel case.
+				if(dot(channelMask, float4(1.0f)) == 1.0f){
+					float val = dot(masked, channelMask);
+					masked = float4(val, val, val, 1.0f);
+				}
+				return masked;
+			}
+
             float4 sample(texture2d<float, access::sample> texture, sampler textureSampler, float2 uv, float4 channelMask) {
                 float4 color = texture.sample(textureSampler, uv);
                 if (uv.x < 0.0f || uv.x > 1.0f || uv.y < 0.0f || uv.y > 1.0f) {
                     return float4(0.0f);
                 }
-                return mix(float4(0.0f, 0.0f, 0.0f, 1.0f), color, channelMask);
+                return applyMask(color, channelMask);
             }
 
             struct VertexOut {
