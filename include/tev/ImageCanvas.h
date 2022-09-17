@@ -22,6 +22,42 @@ struct CanvasStatistics {
     int histogramZero;
 };
 
+struct HistogramHelper {
+
+public:
+
+	constexpr static const int NUM_BINS = 400;
+
+	HistogramHelper(float minimum, float maximum){
+		// Cache log values.
+		mMinLog  = symmetricLog(minimum);
+		mDiffLog = symmetricLog(maximum) - mMinLog;
+	}
+
+	int valToBin(float val) const {
+		return std::clamp((int)(NUM_BINS * (symmetricLog(val) - mMinLog) / mDiffLog), 0, NUM_BINS - 1);
+	};
+
+	float binToVal(float val) const {
+		return symmetricLogInverse((mDiffLog * val / NUM_BINS) + mMinLog);
+	};
+
+private:
+
+	constexpr static const float addition = 0.001f;
+	float mMinLog = 1.0f;
+	float mDiffLog = 0.0f;
+
+	static float symmetricLogInverse(float val) {
+		return val > 0 ? (exp(val + log(addition)) - addition) : -(exp(-val + log(addition)) - addition);
+	};
+
+	static float symmetricLog(float val) {
+		return val > 0 ? (log(val + addition) - log(addition)) : -(log(-val + addition) - log(addition));
+	};
+
+};
+
 class ImageCanvas : public nanogui::Canvas {
 public:
     ImageCanvas(nanogui::Widget* parent, float pixelRatio);
