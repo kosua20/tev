@@ -101,6 +101,8 @@ public:
 
     void setGamma(float value);
 
+	void setMinimumAndMaximum(float minimum, float maximum);
+
     void normalizeExposureAndOffset();
     void resetImage();
 
@@ -159,6 +161,8 @@ private:
     void updateFilter();
     void updateLayout();
     void updateTitle();
+	void updateMinimumAndMaximum();
+	
     std::string groupName(size_t index);
 
     int groupId(const std::string& groupName) const;
@@ -188,6 +192,7 @@ private:
 
     bool mRequiresFilterUpdate = true;
     bool mRequiresLayoutUpdate = true;
+	bool mRequiresMinMaxRangeUpdate = true;
 
     nanogui::Widget* mVerticalScreenSplit;
 
@@ -218,6 +223,8 @@ private:
     std::vector<std::shared_ptr<Image>> mImages;
 
     MultiGraph* mHistogram;
+	nanogui::FloatBox<float>* mMinValue;
+	nanogui::FloatBox<float>* mMaxValue;
     std::set<std::shared_ptr<Image>> mToBump;
 
     nanogui::TextBox* mFilter;

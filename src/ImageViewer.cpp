@@ -327,6 +327,35 @@ ImageViewer::ImageViewer(const shared_ptr<BackgroundImagesLoader>& imagesLoader,
             mHistogram = new MultiGraph{panel, ""};
         }
 
+		{
+			panel = new Widget{mSidebarLayout};
+			panel->set_layout(new GridLayout{Orientation::Horizontal, 2, Alignment::Fill, 5, 2});
+
+			mMinValue = new FloatBox<float>{panel, 0.0f};
+			mMinValue->set_editable(true);
+			mMinValue->set_spinnable(true);
+			mMinValue->set_alignment(TextBox::Alignment::Left);
+			mMinValue->set_tooltip("Min value to scale to 0.0");
+			mMinValue->set_font_size(15);
+			mMinValue->set_callback([this](float val) {
+				val = std::min(mMaxValue->value() - 0.0001f, val);
+				setMinimumAndMaximum(val, mMaxValue->value());
+				return true;
+			});
+
+			mMaxValue = new FloatBox<float>{panel, 1.0f};
+			mMaxValue->set_editable(true);
+			mMaxValue->set_spinnable(true);
+			mMaxValue->set_alignment(TextBox::Alignment::Right);
+			mMaxValue->set_tooltip("Max value to scale to 1.0");
+			mMaxValue->set_font_size(15);
+			mMaxValue->set_callback([this](float val) {
+				val = std::max(mMinValue->value() + 0.0001f, val);
+				setMinimumAndMaximum(mMinValue->value(), val);
+				return true;
+			});
+		}
+
         // Fuzzy filter of open images
         {
             panel = new Widget{mSidebarLayout};
@@ -982,6 +1011,11 @@ void ImageViewer::draw_contents() {
         mRequiresFilterUpdate = false;
     }
 
+	if(mRequiresMinMaxRangeUpdate){
+		updateMinimumAndMaximum();
+		mRequiresMinMaxRangeUpdate = false;
+	}
+
     if (mRequiresLayoutUpdate) {
         nanogui::Vector2i oldDraggedImageButtonPos{0, 0};
         auto& buttons = mImageButtonContainer->children();
@@ -1465,6 +1499,7 @@ void ImageViewer::setExposure(float value) {
     mExposureLabel->set_caption(fmt::format("Exposure: {:+.1f}", value));
 
     mImageCanvas->setExposure(value);
+	mRequiresMinMaxRangeUpdate = true;
 }
 
 void ImageViewer::setOffset(float value) {
@@ -1473,6 +1508,7 @@ void ImageViewer::setOffset(float value) {
     mOffsetLabel->set_caption(fmt::format("Offset: {:+.2f}", value));
 
     mImageCanvas->setOffset(value);
+	mRequiresMinMaxRangeUpdate = true;
 }
 
 void ImageViewer::setGamma(float value) {
@@ -1481,6 +1517,22 @@ void ImageViewer::setGamma(float value) {
     mGammaLabel->set_caption(fmt::format("Gamma: {:+.2f}", value));
 
     mImageCanvas->setGamma(value);
+}
+
+void ImageViewer::setMinimumAndMaximum(float minimum, float maximum){
+
+	mMinValue->set_value(minimum);
+	mMaxValue->set_value(maximum);
+
+	float factor = 1.0f / std::max(maximum - minimum, 0.001f);
+	setExposure(log2(factor));
+	setOffset(-minimum * factor);
+
+	// Compute the bin indices corresponding to min and max.
+	HistogramHelper histoHelper(mHistogram->minimum(), mHistogram->maximum());
+	int minBin = histoHelper.valToBin(minimum);
+	int maxBin = histoHelper.valToBin(maximum);
+	mHistogram->setHighlightedRange({minBin, maxBin});
 }
 
 void ImageViewer::normalizeExposureAndOffset() {
@@ -1499,12 +1551,11 @@ void ImageViewer::normalizeExposureAndOffset() {
         minimum = min(minimum, cmin);
     }
 
-    float factor = 1.0f / (maximum - minimum);
-    setExposure(log2(factor));
-    setOffset(-minimum * factor);
+	setMinimumAndMaximum(minimum, maximum);
 }
 
 void ImageViewer::resetImage() {
+	setMinimumAndMaximum(0.0f, 1.0f);
     setExposure(0);
     setOffset(0);
     setGamma(2.2f);
@@ -1915,6 +1966,22 @@ void ImageViewer::updateTitle() {
     }
 
     set_caption(caption);
+}
+
+void ImageViewer::updateMinimumAndMaximum(){
+	// Update min and max.
+	float delta = 1.0f / std::pow(2.f, mExposureSlider->value());
+	float minimum = -mOffsetSlider->value() * delta;
+	float maximum = minimum + delta;
+
+	mMinValue->set_value(minimum);
+	mMaxValue->set_value(maximum);
+
+	// Compute the bin indices corresponding to min and max.
+	HistogramHelper histoHelper(mHistogram->minimum(), mHistogram->maximum());
+	int minBin = histoHelper.valToBin(minimum);
+	int maxBin = histoHelper.valToBin(maximum);
+	mHistogram->setHighlightedRange({minBin, maxBin});
 }
 
 string ImageViewer::groupName(size_t index) {
