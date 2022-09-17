@@ -1494,7 +1494,7 @@ void ImageViewer::selectReference(const shared_ptr<Image>& image) {
 }
 
 void ImageViewer::setExposure(float value) {
-    value = round(value, 1.0f);
+    value = round(value, 5.0f);
     mExposureSlider->set_value(value);
     mExposureLabel->set_caption(fmt::format("Exposure: {:+.1f}", value));
 
@@ -1503,7 +1503,7 @@ void ImageViewer::setExposure(float value) {
 }
 
 void ImageViewer::setOffset(float value) {
-    value = round(value, 2.0f);
+    value = round(value, 6.0f);
     mOffsetSlider->set_value(value);
     mOffsetLabel->set_caption(fmt::format("Offset: {:+.2f}", value));
 
