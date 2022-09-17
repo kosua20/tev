@@ -232,7 +232,9 @@ ETonemap toTonemap(string name) {
         return FalseColor;
     } else if (name == "POSITIVENEGATIVE" || name == "POSNEG" || name == "PN" ||name == "+-") {
         return PositiveNegative;
-    } else {
+    } else if (name == "LINEAR") {
+		return Linear;
+	} else {
         return SRGB;
     }
 }

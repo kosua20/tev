@@ -289,7 +289,8 @@ enum ETonemap : int {
     Gamma,
     FalseColor,
     PositiveNegative,
-
+	Linear,
+	
     // This enum value should never be used directly.
     // It facilitates looping over all members of this enum.
     NumTonemaps,

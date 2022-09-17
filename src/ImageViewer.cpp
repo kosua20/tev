@@ -196,7 +196,7 @@ ImageViewer::ImageViewer(const shared_ptr<BackgroundImagesLoader>& imagesLoader,
     // Tonemap options
     {
         mTonemapButtonContainer = new Widget{mSidebarLayout};
-        mTonemapButtonContainer->set_layout(new GridLayout{Orientation::Horizontal, 4, Alignment::Fill, 5, 2});
+        mTonemapButtonContainer->set_layout(new GridLayout{Orientation::Horizontal, 5, Alignment::Fill, 5, 2});
 
         auto makeTonemapButton = [&](const string& name, function<void()> callback) {
             auto button = new Button{mTonemapButtonContainer, name};
@@ -206,6 +206,7 @@ ImageViewer::ImageViewer(const shared_ptr<BackgroundImagesLoader>& imagesLoader,
             return button;
         };
 
+		makeTonemapButton("Lin",   [this]() { setTonemap(ETonemap::Linear); });
         makeTonemapButton("sRGB",  [this]() { setTonemap(ETonemap::SRGB); });
         makeTonemapButton("Gamma", [this]() { setTonemap(ETonemap::Gamma); });
         makeTonemapButton("FC",    [this]() { setTonemap(ETonemap::FalseColor); });
@@ -215,6 +216,9 @@ ImageViewer::ImageViewer(const shared_ptr<BackgroundImagesLoader>& imagesLoader,
 
         mTonemapButtonContainer->set_tooltip(
             "Tonemap operator selection:\n\n"
+
+			"Linear\n"
+			"Raw values\n\n"
 
             "sRGB\n"
             "Linear to sRGB conversion\n\n"

@@ -398,6 +398,11 @@ Vector3f ImageCanvas::applyTonemap(const Vector3f& value, float gamma, ETonemap 
                 result = {-2.0f * mean(min(value, Vector3f{0.0f})), 2.0f * mean(max(value, Vector3f{0.0f})), 0.0f};
                 break;
             }
+		case ETonemap::Linear:
+			{
+				result = value;
+				break;
+			}
         default:
             throw runtime_error{"Invalid tonemap selected."};
     }

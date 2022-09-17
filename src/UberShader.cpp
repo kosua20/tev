@@ -51,6 +51,7 @@ UberShader::UberShader(RenderPass* renderPass) {
             #define GAMMA       1
             #define FALSE_COLOR 2
             #define POS_NEG     3
+			#define LINEAR     	4
 
             #define ERROR                   0
             #define ABSOLUTE_ERROR          1
@@ -127,7 +128,11 @@ UberShader::UberShader(RenderPass* renderPass) {
                     return falseColor(log2(average(col)+0.03125) / 10.0 + 0.5) + (background.rgb - falseColor(0.0)) * background.a;
                 } else if (tonemap == POS_NEG) {
                     return vec3(-average(min(col, vec3(0.0))) * 2.0, average(max(col, vec3(0.0))) * 2.0, 0.0) + background.rgb * background.a;
-                }
+                } else if(tonemap == LINEAR) {
+					col = col +
+							 (vec3(linear(background.r), linear(background.g), linear(background.b)) - offset) * background.a;
+					return col.rgb;
+				}
                 return vec3(0.0);
             }
 
@@ -223,6 +228,7 @@ UberShader::UberShader(RenderPass* renderPass) {
             #define GAMMA       1
             #define FALSE_COLOR 2
             #define POS_NEG     3
+			#define LINEAR      4
 
             #define ERROR                   0
             #define ABSOLUTE_ERROR          1
@@ -279,6 +285,10 @@ UberShader::UberShader(RenderPass* renderPass) {
                         return falseColor(log2(average(col)+0.03125f) / 10.0f + 0.5f, colormap, colormapSampler) + (background.rgb - falseColor(0.0f, colormap, colormapSampler)) * background.a;
                     case POS_NEG:
                         return float3(-average(min(col, float3(0.0f))) * 2.0f, average(max(col, float3(0.0f))) * 2.0f, 0.0f) + background.rgb * background.a;
+					case LINEAR:
+						col = col +
+							(float3(background.r, background.g, background.b) - offset) * background.a;
+						return col.rgb;
                 }
                 return float3(0.0f);
             }
