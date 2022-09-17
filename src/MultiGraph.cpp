@@ -84,6 +84,18 @@ void MultiGraph::draw(NVGcontext *ctx) {
             nvgFill(ctx);
         }
 
+		nvgSave(ctx);
+		nvgGlobalCompositeBlendFunc(ctx, NVGblendFactor::NVG_ONE, NVGblendFactor::NVG_ONE);
+
+		float rangeMin = m_pos.x() + 2 + mHighlightedRange.x() * (m_size.x() - 4) / (float)(nBins - 1);
+		float rangeMax = m_pos.x() + 2 + mHighlightedRange.y() * (m_size.x() - 4) / (float)(nBins - 1);
+
+		nvgBeginPath(ctx);
+		nvgRect(ctx, rangeMin, m_pos.y() + 1, rangeMax - rangeMin, m_size.y() - 2);
+		nvgFillColor(ctx, Color(0.1f, 1.0f));
+		nvgFill(ctx);
+		nvgRestore(ctx);
+
         nvgFontFace(ctx, "sans");
 
         nvgFontSize(ctx, 15.0f);

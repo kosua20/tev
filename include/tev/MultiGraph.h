@@ -58,9 +58,22 @@ public:
         mZeroBin = zeroBin;
     }
 
+	void setHighlightedRange(const nanogui::Vector2i& range){
+		mHighlightedRange = range;
+	}
+
+	float minimum() const {
+		return mMinimum;
+	}
+
+	float maximum() const {
+		return mMaximum;
+	}
+
 protected:
     std::string mCaption, mHeader, mFooter;
     nanogui::Color mBackgroundColor, mForegroundColor, mTextColor;
+	nanogui::Vector2i mHighlightedRange{0, 0};
     std::vector<float> mValues;
     int mNChannels = 1;
     float mMinimum = 0, mMean = 0, mMaximum = 0;
