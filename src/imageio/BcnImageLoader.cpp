@@ -17,17 +17,31 @@ using namespace std;
 
 TEV_NAMESPACE_BEGIN
 
+uint32_t makeFourCC(char a, char b, char c, char d){
+	return (uint32_t)a | (uint32_t)b << 8 | (uint32_t)c << 16 | (uint32_t)d << 24;
+}
+
+
 bool BcnImageLoader::canLoadFile(istream& iStream) const {
     char b[4];
     iStream.read(b, sizeof(b));
-
-	bool result = !!iStream && iStream.gcount() == sizeof(b) && (b[0] == 'D' && b[1] == 'D' && b[2] == 'S' && b[3] == ' ');
-	// TODO: other (0xAB, 'K', 'T', 'X', DXT direct files)...
-
+	// Check status before reseting.
+	const bool validRead = !!iStream && iStream.gcount() == sizeof(b);
+	// Reset stream.
 	iStream.clear();
 	iStream.seekg(0);
 
-    return result;
+	if(!validRead){
+		return false;
+	}
+	const uint32_t magicDDS = makeFourCC('D', 'D', 'S', ' ');
+	const uint32_t magicKTX = makeFourCC(0xAB, 'K', 'T', 'X');
+	const uint32_t magicFile = makeFourCC(b[0], b[1], b[2], b[3]);
+	if(magicFile == magicDDS ||
+	   magicFile == magicKTX){
+		return true;
+	}
+	return false;
 }
 
 Task<vector<ImageData>> BcnImageLoader::load(istream& iStream, const fs::path&, const string& channelSelector, int priority) const {
@@ -66,6 +80,8 @@ Task<vector<ImageData>> BcnImageLoader::load(istream& iStream, const fs::path&, 
 		{ DDSKTX_FORMAT_BC7,	{ 4, 1, BCDEC_BC7_BLOCK_SIZE }},
 		{ DDSKTX_FORMAT_BGRA8,	{ 4, 1, 4 }},
 		{ DDSKTX_FORMAT_RGBA8,	{ 4, 1, 4 }},
+		{ DDSKTX_FORMAT_RGBA8S,	{ 4, 4, 4 }},
+		{ DDSKTX_FORMAT_RG8S,	{ 2, 4, 2 }},
 		{ DDSKTX_FORMAT_RGB8,	{ 3, 1, 3 }},
 		{ DDSKTX_FORMAT_RG8,	{ 2, 1, 2 }},
 		{ DDSKTX_FORMAT_RGBA16F,{ 4, 4, 4 * 2 }},
@@ -73,36 +89,29 @@ Task<vector<ImageData>> BcnImageLoader::load(istream& iStream, const fs::path&, 
 		{ DDSKTX_FORMAT_R16F,	{ 1, 4, 1 * 2 }},
 		{ DDSKTX_FORMAT_R8,		{ 1, 1, 1 }},
 		{ DDSKTX_FORMAT_A8,		{ 1, 1, 1 }},
+		{ DDSKTX_FORMAT_R16,	{ 1, 4, 2 }},
+		{ DDSKTX_FORMAT_RG16,	{ 2, 4, 2 * 2}},
+		{ DDSKTX_FORMAT_RGBA16,	{ 4, 4, 4 * 2}},
+		{ DDSKTX_FORMAT_RG16S,	{ 2, 4, 2 * 2}},
 		{ DDSKTX_FORMAT_R32F,	{ 1, 4, 1 * 4 }},
 	};
 
-	// TODO: Missing: DDSKTX_FORMAT_RGBA8S,
-	// TODO: Missing: DDSKTX_FORMAT_RG16,
-	// TODO: Missing: DDSKTX_FORMAT_R16,
-	// TODO: Missing: DDSKTX_FORMAT_RG16S,
-	// TODO: Missing: DDSKTX_FORMAT_RGBA16,
-	// TODO: Missing: DDSKTX_FORMAT_RGB10A2,
-	// TODO: Missing: DDSKTX_FORMAT_RG11B10F,
-	// TODO: Missing: DDSKTX_FORMAT_RG8S
-
+	// TODO: Missing: DDSKTX_FORMAT_RGB10A2
+	// TODO: Missing: DDSKTX_FORMAT_RG11B10F
 
 	if(formatInfos.count(texInfo.format) == 0){
 		throw invalid_argument{ fmt::format("DDS image does not use supported format ({}).",
 											ddsktx_format_str(texInfo.format)) };
 	}
 
-	// TODO: if !hasAlpha, clear the alpha channel?
-	// TODO: if isSrgb, which conversion to apply/skip?
 	const bool isSrgb = (texInfo.flags & DDSKTX_TEXTURE_FLAG_SRGB) != 0u;
 	const bool hasAlpha = (texInfo.flags & DDSKTX_TEXTURE_FLAG_ALPHA) != 0u;
 	const bool isCube = (texInfo.flags & DDSKTX_TEXTURE_FLAG_CUBEMAP) != 0u;
 	const bool is3D = ((texInfo.flags & DDSKTX_TEXTURE_FLAG_VOLUME) != 0u) || (texInfo.depth != 1u);
 	const bool isArray = texInfo.num_layers != 1u;
 
-	// TODO: How should we lay out the slices/mips/faces.
 	// For now, one part per mip (because different sizes), ignore the channel selector (which should be used with matchesFuzzy(name, selector)), and layer/face as channel layers.
 	// For cubemaps, maybe flatten in a cross?
-	// Display string for layers should be compacted.
 
 	// TODO: taskify.
 
@@ -170,6 +179,8 @@ Task<vector<ImageData>> BcnImageLoader::load(istream& iStream, const fs::path&, 
 					for(int j = 0; j < sliceInfo.width; j += stepSize){
 						unsigned char* dstLine = dst + (i * size.x() + j) * format.channelCount * format.bytesPerChannel;
 						switch (texInfo.format) {
+
+							// BC formats
 							case DDSKTX_FORMAT_BC1:
 								bcdec_bc1(src, dstLine, dstPitch);
 								break;
@@ -192,51 +203,65 @@ Task<vector<ImageData>> BcnImageLoader::load(istream& iStream, const fs::path&, 
 							case DDSKTX_FORMAT_BC7:
 								bcdec_bc7(src, dstLine, dstPitch);
 								break;
+
+							// 8U flipped
 							case DDSKTX_FORMAT_BGRA8:
                                 dstLine[0] = src[2];
                                 dstLine[1] = src[1];
                                 dstLine[2] = src[0];
                                 dstLine[3] = src[3];
 								break;
+
+							// 8U
 							case DDSKTX_FORMAT_RGBA8:
-                                dstLine[0] = src[0];
-                                dstLine[1] = src[1];
-                                dstLine[2] = src[2];
-                                dstLine[3] = src[3];
-								break;
+								dstLine[3] = src[3];
 							case DDSKTX_FORMAT_RGB8:
-                                dstLine[0] = src[0];
-                                dstLine[1] = src[1];
                                 dstLine[2] = src[2];
-								break;
 							case DDSKTX_FORMAT_RG8:
-                                dstLine[0] = src[0];
                                 dstLine[1] = src[1];
-								break;
 							case DDSKTX_FORMAT_R8:
 							case DDSKTX_FORMAT_A8:
                                 dstLine[0] = src[0];
 								break;
+
+							// 16U
+							case DDSKTX_FORMAT_RGBA16:
+								((float*) dstLine)[3] = float(((unsigned short*)src)[3]) / 65535.0f;
+								((float*) dstLine)[2] = float(((unsigned short*)src)[2]) / 65535.0f;
+							case DDSKTX_FORMAT_RG16:
+								((float*) dstLine)[1] = float(((unsigned short*)src)[1]) / 65535.0f;
+							case DDSKTX_FORMAT_R16:
+								((float*) dstLine)[0] = float(((unsigned short*)src)[0]) / 65535.0f;
+								break;
+
+							// 16S
+							case DDSKTX_FORMAT_RG16S:
+								((float*) dstLine)[0] = float(((signed short*)src)[0]) / 3267.0f;
+								((float*) dstLine)[1] = float(((signed short*)src)[1]) / 3267.0f;
+								break;
+
+							// 8S
+							case DDSKTX_FORMAT_RGBA8S:
+								((float*) dstLine)[3] = float(((signed char*)src)[3]) / 255.0f;
+								((float*) dstLine)[2] = float(((signed char*)src)[2]) / 255.0f;
+							case DDSKTX_FORMAT_RG8S:
+								((float*) dstLine)[1] = float(((signed char*)src)[1]) / 255.0f;
+								((float*) dstLine)[0] = float(((signed char*)src)[0]) / 255.0f;
+								break;
+
+							// 16F
+							case DDSKTX_FORMAT_RGBA16F:
+								((float*) dstLine)[3] = bcdec__half_to_float_quick(((unsigned short*)src)[3]);
+								((float*) dstLine)[2] = bcdec__half_to_float_quick(((unsigned short*)src)[2]);
+							case DDSKTX_FORMAT_RG16F:
+								((float*) dstLine)[1] = bcdec__half_to_float_quick(((unsigned short*)src)[1]);
+							case DDSKTX_FORMAT_R16F:
+								((float*) dstLine)[0] = bcdec__half_to_float_quick(((unsigned short*)src)[0]);
+								break;
+
+							// 32F
 							case DDSKTX_FORMAT_R32F:
 								((float*) dstLine )[0] = ((float*)src)[0];
-								break;
-							case DDSKTX_FORMAT_R16F:
-								{
-									unsigned short v = (src[1] << 8) | src[0];
-									((float*) dstLine )[0] = bcdec__half_to_float_quick(v);
-								}
-								break;
-							case DDSKTX_FORMAT_RG16F:
-								for(int c = 0; c < 2; ++c){
-									unsigned short v = (src[2 * c + 1] << 8) | src[2 * c];
-									((float*) dstLine )[c] = bcdec__half_to_float_quick(v);
-								}
-								break;
-							case DDSKTX_FORMAT_RGBA16F:
-								for(int c = 0; c < 4; ++c){
-									unsigned short v = (src[2 * c + 1] << 8) | src[2 * c];
-									((float*) dstLine )[c] = bcdec__half_to_float_quick(v);
-								}
 								break;
 							default:
 								break;
@@ -256,11 +281,11 @@ Task<vector<ImageData>> BcnImageLoader::load(istream& iStream, const fs::path&, 
 							resultData.channels[firstChannel + c].at(i) = ((float)dstData[idx])/255.0f;
 						}
 
-						// Gamma conversion (even is sRGB flag not present?)
+						// Gamma conversion (TODO: even is sRGB flag not present?)
 						if(c != 3){
 							resultData.channels[firstChannel + c].at(i) = toLinear(resultData.channels[firstChannel + c].at(i));
-                        }  else if(!hasAlpha ) {
-                            resultData.channels[firstChannel + c].at( i ) = 1.f;
+                        } else if(!hasAlpha) {
+                            resultData.channels[firstChannel + c].at(i) = 1.f;
                         }
 					}
 				}
