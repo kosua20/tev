@@ -206,19 +206,16 @@ ImageViewer::ImageViewer(const shared_ptr<BackgroundImagesLoader>& imagesLoader,
             return button;
         };
 
-		makeTonemapButton("Lin",   [this]() { setTonemap(ETonemap::Linear); });
         makeTonemapButton("sRGB",  [this]() { setTonemap(ETonemap::SRGB); });
         makeTonemapButton("Gamma", [this]() { setTonemap(ETonemap::Gamma); });
         makeTonemapButton("FC",    [this]() { setTonemap(ETonemap::FalseColor); });
         makeTonemapButton("+/-",   [this]() { setTonemap(ETonemap::PositiveNegative); });
+		makeTonemapButton("Lin",   [this]() { setTonemap(ETonemap::Linear); });
 
         setTonemap(ETonemap::SRGB);
 
         mTonemapButtonContainer->set_tooltip(
             "Tonemap operator selection:\n\n"
-
-			"Linear\n"
-			"Raw values\n\n"
 
             "sRGB\n"
             "Linear to sRGB conversion\n\n"
@@ -231,6 +228,9 @@ ImageViewer::ImageViewer(const shared_ptr<BackgroundImagesLoader>& imagesLoader,
 
             "+/-\n"
             "Positive=Green, Negative=Red"
+
+			"Linear\n"
+			"Raw values\n\n"
         );
     }
 
