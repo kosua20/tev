@@ -1063,6 +1063,18 @@ void ImageViewer::draw_contents() {
         );
     }
 
+	// Check if the histogram has been updated
+	if(mHistogram->updatingRange()){
+		const nanogui::Vector2i& histogramRange = mHistogram->highlightedRange();
+		// Convert from bins to values.
+		HistogramHelper histoHelper(mHistogram->minimum(), mHistogram->maximum());
+		int minBin = std::min(histogramRange.x(), histogramRange.y());
+		int maxBin = std::max(histogramRange.x(), histogramRange.y());
+		float minimum = histoHelper.binToVal(minBin);
+		float maximum = histoHelper.binToVal(maxBin);
+		setMinimumAndMaximum(minimum, maximum);
+	}
+
 	if(mRequiresMinMaxRangeUpdate){
 		updateMinimumAndMaximum();
 		mRequiresMinMaxRangeUpdate = false;
