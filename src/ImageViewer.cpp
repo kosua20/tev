@@ -1011,11 +1011,6 @@ void ImageViewer::draw_contents() {
         mRequiresFilterUpdate = false;
     }
 
-	if(mRequiresMinMaxRangeUpdate){
-		updateMinimumAndMaximum();
-		mRequiresMinMaxRangeUpdate = false;
-	}
-
     if (mRequiresLayoutUpdate) {
         nanogui::Vector2i oldDraggedImageButtonPos{0, 0};
         auto& buttons = mImageButtonContainer->children();
@@ -1067,6 +1062,11 @@ void ImageViewer::draw_contents() {
             fmt::format("{}", histogramTooltipBase)
         );
     }
+
+	if(mRequiresMinMaxRangeUpdate){
+		updateMinimumAndMaximum();
+		mRequiresMinMaxRangeUpdate = false;
+	}
 }
 
 void ImageViewer::insertImage(shared_ptr<Image> image, size_t index, bool shallSelect) {
@@ -1494,7 +1494,7 @@ void ImageViewer::selectReference(const shared_ptr<Image>& image) {
 }
 
 void ImageViewer::setExposure(float value) {
-    value = round(value, 5.0f);
+    //value = round(value, 10.0f);
     mExposureSlider->set_value(value);
     mExposureLabel->set_caption(fmt::format("Exposure: {:+.1f}", value));
 
@@ -1503,7 +1503,7 @@ void ImageViewer::setExposure(float value) {
 }
 
 void ImageViewer::setOffset(float value) {
-    value = round(value, 6.0f);
+    //value = round(value, 10.0f);
     mOffsetSlider->set_value(value);
     mOffsetLabel->set_caption(fmt::format("Offset: {:+.2f}", value));
 
@@ -1524,7 +1524,7 @@ void ImageViewer::setMinimumAndMaximum(float minimum, float maximum){
 	mMinValue->set_value(minimum);
 	mMaxValue->set_value(maximum);
 
-	float factor = 1.0f / std::max(maximum - minimum, 0.001f);
+	float factor = 1.0f / std::max(maximum - minimum, 0.000001f);
 	setExposure(log2(factor));
 	setOffset(-minimum * factor);
 
