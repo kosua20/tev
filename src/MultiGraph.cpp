@@ -26,6 +26,37 @@ Vector2i MultiGraph::preferred_size(NVGcontext *) const {
     return Vector2i(180, 80);
 }
 
+bool MultiGraph::mouse_button_event(const Vector2i &p, int button, bool down, int modifiers){
+	if(button == GLFW_MOUSE_BUTTON_1 && mRangeInit){
+		if(contains(p) && down){
+			// Start only if clicked inside.
+			// Compute the min bin.
+			size_t nBins = mValues.size() / mNChannels;
+			mHighlightedRange.x() = (p.x() - m_pos.x() - 2) * (float)(nBins - 1) / (m_size.x() - 4);
+			// The next bin (don't care if overflow)
+			mHighlightedRange.y() = mHighlightedRange.x() + 1;
+			mDraggingRange = true;
+		} else {
+			// But stop in all cases.
+			mDraggingRange = false;
+		}
+		return true;
+	}
+	return Widget::mouse_button_event(p, button, down, modifiers);
+}
+
+
+bool MultiGraph::mouse_motion_event(const Vector2i &p, const Vector2i &rel, int button, int modifiers){
+	if(mDraggingRange){
+		// Compute the max bin.
+		size_t nBins = mValues.size() / mNChannels;
+		float newBin = (p.x() - m_pos.x() - 2) * (float)(nBins - 1) / (m_size.x() - 4);
+		mHighlightedRange.y() = newBin;
+		return true;
+	}
+	return Widget::mouse_motion_event(p, rel, button, modifiers);
+}
+
 void MultiGraph::draw(NVGcontext *ctx) {
     Widget::draw(ctx);
 

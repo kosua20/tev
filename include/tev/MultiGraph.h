@@ -40,6 +40,8 @@ public:
     void setNChannels(int nChannels) { mNChannels = nChannels; }
 
     virtual nanogui::Vector2i preferred_size(NVGcontext *ctx) const override;
+	virtual bool mouse_button_event(const nanogui::Vector2i &p, int button, bool down, int modifiers) override;
+	virtual bool mouse_motion_event(const nanogui::Vector2i &p, const nanogui::Vector2i &rel, int button, int modifiers) override;
     virtual void draw(NVGcontext *ctx) override;
 
     void setMinimum(float minimum) {
@@ -69,6 +71,13 @@ public:
 			mRangeInit = true;
 		}
 	}
+
+	const nanogui::Vector2i& highlightedRange() const {
+		return mHighlightedRange;
+	}
+
+	bool updatingRange() const {
+		return mDraggingRange;
 	}
 
 	float minimum() const {
@@ -87,6 +96,7 @@ protected:
     int mNChannels = 1;
     float mMinimum = 0, mMean = 0, mMaximum = 0;
     int mZeroBin = 0;
+	bool mDraggingRange = false;
 	bool mRangeInit = false;
 };
 
