@@ -54,12 +54,21 @@ public:
         mMaximum = maximum;
     }
 
-    void setZero(int zeroBin) {
+    void setZeroAndOneBins(int zeroBin, int oneBin) {
         mZeroBin = zeroBin;
+		if(!mRangeInit && (zeroBin != oneBin)){
+			mHighlightedRange.x() = zeroBin;
+			mHighlightedRange.y() = oneBin;
+			mRangeInit = true;
+		}
     }
 
 	void setHighlightedRange(const nanogui::Vector2i& range){
 		mHighlightedRange = range;
+		if(!mRangeInit && (range.x() != range.y())){
+			mRangeInit = true;
+		}
+	}
 	}
 
 	float minimum() const {
@@ -73,11 +82,12 @@ public:
 protected:
     std::string mCaption, mHeader, mFooter;
     nanogui::Color mBackgroundColor, mForegroundColor, mTextColor;
-	nanogui::Vector2i mHighlightedRange{0, 0};
+	nanogui::Vector2i mHighlightedRange{-1, -1};
     std::vector<float> mValues;
     int mNChannels = 1;
     float mMinimum = 0, mMean = 0, mMaximum = 0;
     int mZeroBin = 0;
+	bool mRangeInit = false;
 };
 
 TEV_NAMESPACE_END

@@ -20,6 +20,7 @@ struct CanvasStatistics {
     std::vector<float> histogram;
     int nChannels;
     int histogramZero;
+	int histogramOne;
 };
 
 struct HistogramHelper {

@@ -1044,7 +1044,7 @@ void ImageViewer::draw_contents() {
             mHistogram->setMinimum(statistics->minimum);
             mHistogram->setMean(statistics->mean);
             mHistogram->setMaximum(statistics->maximum);
-            mHistogram->setZero(statistics->histogramZero);
+            mHistogram->setZeroAndOneBins(statistics->histogramZero, statistics->histogramOne);
             mHistogram->set_tooltip(fmt::format(
                 "{}\n\n"
                 "Minimum: {:.3f}\n"
@@ -1062,7 +1062,7 @@ void ImageViewer::draw_contents() {
         mHistogram->setMinimum(0);
         mHistogram->setMean(0);
         mHistogram->setMaximum(0);
-        mHistogram->setZero(0);
+        mHistogram->setZeroAndOneBins(0, 0);
         mHistogram->set_tooltip(
             fmt::format("{}", histogramTooltipBase)
         );

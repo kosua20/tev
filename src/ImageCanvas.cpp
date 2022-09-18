@@ -743,6 +743,7 @@ Task<shared_ptr<CanvasStatistics>> ImageCanvas::computeCanvasStatistics(
 	HistogramHelper histoHelper(minimum, maximum);
 
     result->histogramZero = histoHelper.valToBin(0);
+	result->histogramOne = histoHelper.valToBin(1);
 
     // In the strange case that we have 0 channels, early return, because the histogram makes no sense.
     if (nChannels == 0) {
